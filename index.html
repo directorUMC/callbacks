@@ -58,6 +58,8 @@
       document.getElementById("wait").className = "gone";
     } else if (d.type === "ucb-set" && typeof d.k === "string" && d.k.length < 120) {
       ls(function () { if (d.v == null) localStorage.removeItem("ucb:" + d.k); else localStorage.setItem("ucb:" + d.k, JSON.stringify(d.v)); });
+    } else if (d.type === "ucb-reload") {   // a newer version of the sheet was published
+      location.reload();
     } else if (d.type === "ucb-signin") {
       ls(function () { localStorage.setItem("ucb-return", String(Date.now())); });
     }
