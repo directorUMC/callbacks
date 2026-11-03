@@ -20,10 +20,18 @@
   @keyframes s { to { transform: rotate(360deg); } }
   #wait p { margin: 0; font-size: 15px; opacity: .9; }
   #wait a { color: #fff; }
+  /* Phones: the Call button shows this bar, a real link on the main page, so iPhone/Android hand the call to the 3CX app */
+  #dial { position: fixed; left: 0; right: 0; bottom: 0; z-index: 10; padding: 16px max(16px, env(safe-area-inset-right, 0px)) calc(16px + env(safe-area-inset-bottom, 0px)) max(16px, env(safe-area-inset-left, 0px));
+          background: #fff; color: #0B2E52; border-radius: 18px 18px 0 0; box-shadow: 0 -8px 30px rgba(11,46,82,.35); display: grid; gap: 10px; transform: translateY(110%); transition: transform .22s ease; }
+  #dial.on { transform: none; }
+  #dial p { margin: 0; font-size: 14px; color: #44607e; text-align: center; }
+  #dialGo { display: block; text-align: center; text-decoration: none; background: #1E9E5A; color: #fff; font-size: 19px; font-weight: 700; padding: 16px; border-radius: 14px; }
+  #dialX { background: none; border: 0; color: #44607e; font: inherit; font-size: 16px; padding: 8px; }
 </style>
 </head>
 <body>
 <div id="wait"><div class="spin"></div><p>Opening the Upright Call Back Sheet…</p><p id="slow" hidden>Taking a while? <a id="direct" href="#">Open it directly</a></p></div>
+<div id="dial" role="dialog" aria-label="Call with 3CX" aria-hidden="true"><p id="dialNum"></p><a id="dialGo" href="#">Call with 3CX</a><button type="button" id="dialX">Cancel</button></div>
 <iframe id="sheet" title="Upright Call Back Sheet" allow="clipboard-write" referrerpolicy="no-referrer"></iframe>
 <script>
 /* Upright Call Back Sheet — holder page.
@@ -47,6 +55,10 @@
   frame.addEventListener("load", function () { setTimeout(function () { document.getElementById("wait").className = "gone"; }, 400); });
   setTimeout(function () { document.getElementById("slow").hidden = false; }, 12000);
 
+  var dial = document.getElementById("dial"), dialGo = document.getElementById("dialGo"), dialT = 0;
+  function hideDial() { dial.className = ""; dial.setAttribute("aria-hidden", "true"); }
+  dialGo.addEventListener("click", function () { setTimeout(hideDial, 400); });
+  document.getElementById("dialX").addEventListener("click", hideDial);
   function ls(fn) { try { return fn(); } catch (e) { return null; } }
   function fromSheet(src) {   // true only for windows inside our own frame
     for (var w = src, i = 0; w && i < 6; i++) { if (w === frame.contentWindow) return true; var up = ls(function () { return w.parent; }); if (!up || up === w) break; w = up; }
@@ -66,7 +78,15 @@
     } else if (d.type === "ucb-dial" && typeof d.num === "string" && /^\+?\d{6,15}$/.test(d.num)) {
       // Call button: click a phone link on this main page, where the 3CX browser extension picks it up and fills its dial pad
       var a = document.createElement("a"); a.href = "tel:" + d.num; a.style.display = "none";
-      document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 1000);
+      if (d.show) {   // phones: a real tap on this page's link hands the call to the 3CX app (taps inside the sheet's frame don't)
+        var n = d.num, pretty = /^04\d{8}$/.test(n) ? n.slice(0, 4) + " " + n.slice(4, 7) + " " + n.slice(7) : n;
+        dialGo.href = "tel:" + n; dialGo.textContent = "Call " + pretty + " with 3CX";
+        document.getElementById("dialNum").textContent = d.name ? "Calling " + String(d.name).slice(0, 60) : "Tap to call through the office line";
+        dial.className = "on"; dial.setAttribute("aria-hidden", "false");
+        clearTimeout(dialT); dialT = setTimeout(hideDial, 30000);
+      } else {
+        document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 1000);
+      }
     } else if (d.type === "ucb-signin") {
       ls(function () { localStorage.setItem("ucb-return", String(Date.now())); });
     }
