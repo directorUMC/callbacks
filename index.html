@@ -54,12 +54,16 @@
     if (d.type === "ucb-hello") {
       var items = {};
       ls(function () { for (var i = 0; i < localStorage.length; i++) { var k = localStorage.key(i); if (k.indexOf("ucb:") === 0) items[k.slice(4)] = JSON.parse(localStorage.getItem(k)); } });
-      e.source.postMessage({ type: "ucb-store", items: items }, e.origin);
+      e.source.postMessage({ type: "ucb-store", items: items, dial: true }, e.origin);
       document.getElementById("wait").className = "gone";
     } else if (d.type === "ucb-set" && typeof d.k === "string" && d.k.length < 120) {
       ls(function () { if (d.v == null) localStorage.removeItem("ucb:" + d.k); else localStorage.setItem("ucb:" + d.k, JSON.stringify(d.v)); });
     } else if (d.type === "ucb-reload") {   // a newer version of the sheet was published
       location.reload();
+    } else if (d.type === "ucb-dial" && typeof d.num === "string" && /^\+?\d{6,15}$/.test(d.num)) {
+      // Call button: click a phone link on this main page, where the 3CX browser extension picks it up and fills its dial pad
+      var a = document.createElement("a"); a.href = "tel:" + d.num; a.style.display = "none";
+      document.body.appendChild(a); a.click(); setTimeout(function () { a.remove(); }, 1000);
     } else if (d.type === "ucb-signin") {
       ls(function () { localStorage.setItem("ucb-return", String(Date.now())); });
     }
